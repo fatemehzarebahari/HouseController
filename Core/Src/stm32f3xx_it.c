@@ -57,8 +57,8 @@
 #define MAXCONTENT 100
 // home stuff:
 int lum = 0;
-int temperature = 100;
-int someOneClose = 1;
+int temperature = 9;
+int someOneClose = 0;
 
 int lumThreshold = 10;
 int temThreshold = 10;
@@ -93,12 +93,10 @@ int lastKeyPressed = 0;
 int sameKeyPressed = 0;
 int lastId;
 int lastPagesId;
-int startState = 2; //0:shut down,1: start menu massage,2: started and generated menu,3:shutdown massage but not gone yet
+int startState = 0; //0:shut down,1: start menu massage,2: started and generated menu,3:shutdown massage but not gone yet
 int startStateLastTime = 0;
 int mSecond = 0;
-int shown = 1;
-int shown1 = 0;
-int shown2 = 1;
+int shown = 0;
 
 
 struct menuScreen{
@@ -332,7 +330,6 @@ void ShowMenu(){
 //    clear();
 	char temp[20] = "                   ";
     setCursor(0,0);
-	HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_8);
     print(currentMenu[p]);
     setCursor(0,1);
     if(p+1 >= MenuoptionCounts)
@@ -428,7 +425,6 @@ void setOn(struct menuScreen* screen){
 	if(strcmp(screen->content,"<  on  >") != 0 ){
 		strcpy(screen->content,"<  on  >");
 		if(screen->id > lastPagesId){
-			HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_11);
 			int index = screen->id - lastPagesId - 1;
 			setScenario(addedScenarios[index][0], addedScenarios[index][1], addedScenarios[index][2], addedScenarios[index][3], addedScenarios[index][4], addedScenarios[index][5], addedScenarios[index][6], addedScenarios[index][7]);
 		}
@@ -770,9 +766,9 @@ void CuationMessage(char* str){
 
 
 void keyHandler(){
-//	if(startState == 2){
+	int key = row * 4 + col +1;
+	if(startState == 2){
 		if(HAL_GetTick()- lastPress<300 ) return;
-		int key = row * 4 + col +1;
 		if(!generateMenu){
 			GenerateMenu();
 			generateMenu = 1;
@@ -781,7 +777,7 @@ void keyHandler(){
 		if(currentNode->screen.id == 19){
 			createScenario();
 		}
-		if(currentNode->screen.id == 6){
+		else if(currentNode->screen.id == 6){
 			if(key != lastKeyPressed){
 				lastKeyPressed = key;
 				typingCount = 1;
@@ -795,10 +791,8 @@ void keyHandler(){
 			messageSetter(currentNode, charSelector(key, typingCount));
 			ShowInfo(currentNode->screen);
 		}
-
 		switch (key) {
 			case 2: // up key
-				HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_8);// does not work
 				if(inMenu && CurrentMenuOption > 0){
 					if(inMenu && CurrentMenuOption == 4)
 						page--;
@@ -851,7 +845,6 @@ void keyHandler(){
 
 				break;
 			case 7: // right key
-				HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_8);
 
 				if(currentNode->screen.id == 8 ||currentNode->screen.id == 9 || currentNode->screen.id == 10 || currentNode->screen.id == 11 || currentNode->screen.id == 12 || currentNode->screen.id == 15 || currentNode->screen.id == 16 || currentNode->screen.id == 17 ||currentNode->screen.id >lastPagesId){
 					setOn(&(currentNode->screen));
@@ -943,7 +936,16 @@ void keyHandler(){
 			break;
 
 		}
-//	}
+	}else if(startState == 0 && key == 16){ // blue push button action
+		setCursor(0,0);
+		if(strlen(startMassage) > 0)
+			print(startMassage);
+		else
+			print("WELLCOME       ");
+		display();
+		startState = 1;
+		startStateLastTime = HAL_GetTick();
+	}
 
 }
 
@@ -954,6 +956,7 @@ void keyHandler(){
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim6;
 extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
@@ -1104,39 +1107,37 @@ void EXTI0_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI0_IRQn 0 */
 	if(HAL_GetTick() - lastPress >200){
-		HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_9);
 
-		col =0;
-		for (int i = 0 ; i < 4 ; i++ ){
-			HAL_GPIO_WritePin(GPIOD,GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,GPIO_PIN_RESET);
-			switch (i) {
-				case 0:
-					   HAL_GPIO_WritePin(GPIOD,GPIO_PIN_0,GPIO_PIN_SET);
-					if(HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0)) row = 0 ;
-					break;
-				case 1:
-					HAL_GPIO_WritePin(GPIOD,GPIO_PIN_1,GPIO_PIN_SET);
-					if(HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0)) row = 1 ;
-					break;
-				case 2:
-					HAL_GPIO_WritePin(GPIOD,GPIO_PIN_2,GPIO_PIN_SET);
-					if(HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0)) row = 2 ;
-					break;
-				case 3:
-					HAL_GPIO_WritePin(GPIOD,GPIO_PIN_3,GPIO_PIN_SET);
-					if(HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0)) row = 3 ;
-					break;
+				col =0;
+				for (int i = 0 ; i < 4 ; i++ ){
+					HAL_GPIO_WritePin(GPIOD,GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,GPIO_PIN_RESET);
+					switch (i) {
+						case 0:
+							   HAL_GPIO_WritePin(GPIOD,GPIO_PIN_0,GPIO_PIN_SET);
+							if(HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0)) row = 0 ;
+							break;
+						case 1:
+							HAL_GPIO_WritePin(GPIOD,GPIO_PIN_1,GPIO_PIN_SET);
+							if(HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0)) row = 1 ;
+							break;
+						case 2:
+							HAL_GPIO_WritePin(GPIOD,GPIO_PIN_2,GPIO_PIN_SET);
+							if(HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0)) row = 2 ;
+							break;
+						case 3:
+							HAL_GPIO_WritePin(GPIOD,GPIO_PIN_3,GPIO_PIN_SET);
+							if(HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0)) row = 3 ;
+							break;
+
+					}
+				}
+
+				keyHandler();
+				HAL_GPIO_WritePin(GPIOD,GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,GPIO_PIN_SET);
+
+				lastPress = HAL_GetTick();
 
 			}
-		}
-
-		keyHandler();
-		HAL_GPIO_WritePin(GPIOD,GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,GPIO_PIN_SET);
-
-		lastPress = HAL_GetTick();
-
-	}
-	while (HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0));
   /* USER CODE END EXTI0_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(keyPad_Pin);
   /* USER CODE BEGIN EXTI0_IRQn 1 */
@@ -1151,7 +1152,6 @@ void EXTI1_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI1_IRQn 0 */
     if (HAL_GetTick() - lastPress > 200) {
-		HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_10);
 
         col = 1;
         for (int i = 0; i < 4; i++) {
@@ -1197,7 +1197,6 @@ void EXTI2_TSC_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI2_TSC_IRQn 0 */
 		if (HAL_GetTick() - lastPress > 200) {
-			HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_11);
 
 			col = 2;
 			for (int i = 0; i < 4; i++) {
@@ -1245,7 +1244,6 @@ void EXTI3_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI3_IRQn 0 */
         if (HAL_GetTick() - lastPress > 200) {
-    		HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_12);
 
             col = 3;
             for (int i = 0; i < 4; i++) {
@@ -1351,7 +1349,7 @@ void ADC1_2_IRQHandler(void)
 void EXTI9_5_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI9_5_IRQn 0 */
-HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_8);
+
   /* USER CODE END EXTI9_5_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_5);
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */
@@ -1392,6 +1390,95 @@ void USART2_IRQHandler(void)
   /* USER CODE BEGIN USART2_IRQn 1 */
 
   /* USER CODE END USART2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles Timer 6 interrupt and DAC underrun interrupts.
+  */
+void TIM6_DAC_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM6_DAC_IRQn 0 */
+
+		if(startState == 1 && HAL_GetTick() - startStateLastTime >= 1000){
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10,1);
+			clear();
+			setCursor(0,0);
+			print(">> ControlPanel  ");
+			GenerateMenu();
+			generateMenu = 1;
+			startState = 2;
+			display();
+		}
+		if(startState == 3 && HAL_GetTick() - startStateLastTime >= 1000){
+			startState = 0;
+			generateMenu = 0;
+			clear();
+		}
+
+		if(temperature > temThreshold || someOneClose){
+			// this part can be changed by animation
+			char temp[1];
+			sprintf(temp,"%d",mSecond);
+			setCursor(17,0);
+			print(temp);
+			if(mSecond < 10){
+				setCursor(0,0);
+				if(temperature > temThreshold){
+					print("High Temper     ");
+					if(temAlarm){
+					// activate temperature alarm
+					}
+				}else{
+					print("                   ");
+				}
+				setCursor(0,1);
+				if(someOneClose && securityAlert){
+					print("Some One Near By   ");
+					if(securityAlarm){
+					// activate security alarm
+					}
+				}else{
+					print("                   ");
+				}
+				setCursor(0,2);
+				print("                   ");
+				setCursor(0,3);
+				print("                   ");
+				shown = 1;
+				if(mSecond %3 ==0)
+					noDisplay();
+				else
+					display();
+			}
+			else{
+				shown = 0;
+				clear();
+				if(startState == 2){
+					if(inMenu)
+						ShowMenu();
+					else
+						ShowInfo(currentNode->screen);
+				}
+			}
+
+		}else if(shown){
+			shown = 0;
+			clear();
+			if(startState == 2){
+				if(inMenu)
+					ShowMenu();
+				else
+					ShowInfo(currentNode->screen);
+			}
+		}
+		mSecond++;
+		if(mSecond>=20) mSecond =0;
+  /* USER CODE END TIM6_DAC_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim6);
+  /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
+	HAL_TIM_Base_Start_IT(&htim6);
+
+  /* USER CODE END TIM6_DAC_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
