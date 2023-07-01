@@ -1,0 +1,3 @@
+/Users/mehrdadhadidian/CLionProjects/finalProject/cmake-build-debug/CMakeFiles/finalProject.elf.dir
+/Users/mehrdadhadidian/CLionProjects/finalProject/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/mehrdadhadidian/CLionProjects/finalProject/cmake-build-debug/CMakeFiles/rebuild_cache.dir
