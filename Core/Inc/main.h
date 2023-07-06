@@ -103,6 +103,14 @@ void Error_Handler(void);
 #define LD8_GPIO_Port GPIOE
 #define LD6_Pin GPIO_PIN_15
 #define LD6_GPIO_Port GPIOE
+#define led1_Pin GPIO_PIN_10
+#define led1_GPIO_Port GPIOB
+#define led2_Pin GPIO_PIN_11
+#define led2_GPIO_Port GPIOB
+#define led3_Pin GPIO_PIN_12
+#define led3_GPIO_Port GPIOB
+#define led4_Pin GPIO_PIN_13
+#define led4_GPIO_Port GPIOB
 #define LCD_Pin GPIO_PIN_8
 #define LCD_GPIO_Port GPIOD
 #define LCDD9_Pin GPIO_PIN_9

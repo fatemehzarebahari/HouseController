@@ -565,6 +565,18 @@ void setLigthToggle(struct menuScreen* screen, int index,int* lights){
 		screen->content[index * 3] = 'O';
 	else
 		screen->content[index * 3] = 'X';
+if(screen->id != 18){
+	switch(index){
+		case 0:HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_10);
+			break;
+		case 1:HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_11);
+			break;
+		case 2:HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_12);
+			break;
+		case 3:HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_13);
+			break;
+	}
+}
 
 }
 void setExactLight(struct menuScreen* screen, int index,int value){
@@ -573,6 +585,17 @@ void setExactLight(struct menuScreen* screen, int index,int value){
 			screen->content[index * 3] = 'O';
 		else
 			screen->content[index * 3] = 'X';
+	switch(index){
+		case 0:HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10,value);
+			break;
+		case 1:HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11,value);
+			break;
+		case 2:HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12,value);
+			break;
+		case 3:HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13,value);
+			break;
+	}
+
 }
 void setScenario(int temperatureThreshold, int temperatureAlarm,int secAlarm, int secAlert, int l1,int l2, int l3, int l4){
 	// calling previous functions
@@ -1488,7 +1511,7 @@ sprintf(temp2,"%d",temperature);
 		}
 		if(temperature <= temThreshold && !someOneClose)
 			alarmPosition = 0;
-		if(temperature > temThreshold || someOneClose){
+		if(temperature > temThreshold || (someOneClose && securityAlert)){
 			if(securityAlarm == 1 && someOneClose &&temAlarm==1 && temperature > temThreshold){
 				alarmPosition = 1;
 			}
