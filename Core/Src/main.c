@@ -77,7 +77,14 @@ static void MX_TIM6_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+TIM_HandleTypeDef *buzzerPwmTimer;
+uint32_t buzzerPwmChannel;
+TIM_HandleTypeDef htim2;
+void buzzerInit() {
+    buzzerPwmTimer = &htim2;
+    buzzerPwmChannel = TIM_CHANNEL_1;
+    HAL_TIM_PWM_Start(buzzerPwmTimer, buzzerPwmChannel);
+}
 /* USER CODE END 0 */
 
 /**
@@ -118,15 +125,20 @@ int main(void)
   MX_ADC2_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
+	buzzerInit();
+    HAL_ADC_Start_IT(&hadc1);//light
+    HAL_ADC_Start_IT(&hadc2);
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, 1);
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, 1);
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, 1);
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_3, 1);
-    LiquidCrystal(GPIOD, GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10, GPIO_PIN_11, GPIO_PIN_12, GPIO_PIN_13, GPIO_PIN_14);
+	LiquidCrystal(GPIOD, GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10, GPIO_PIN_11, GPIO_PIN_12, GPIO_PIN_13, GPIO_PIN_14);
     begin(20,4);
 	HAL_TIM_Base_Start_IT(&htim6);
 
     HAL_TIM_Base_Start_IT(&htim3);
+    HAL_TIM_Base_Start_IT(&htim2);
+
 //    setCursor(0,0);
 //    print(">> ControlPanel");
   /* USER CODE END 2 */

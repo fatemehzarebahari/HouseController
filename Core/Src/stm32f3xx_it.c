@@ -61,7 +61,7 @@ int temperature = 9;
 int someOneClose = 0;
 
 int lumThreshold = 10;
-int temThreshold = 10;
+int temThreshold = 35;
 int Lights[4] = {0,0,0,0};
 int temAlarm = 1;
 int securityAlarm = 1;
@@ -77,6 +77,9 @@ int newSceneTemAlarm = 1;
 int newScenesecurityAlarm = 1;
 int newSceneSecurityAlert = 1;
 
+int minFrequency = 200;
+int maxFrequency = 4000;
+int vol = 100;
 int systemPos = 0;
 int lcdPos = 0;
 uint64_t lastPress =0;
@@ -165,7 +168,7 @@ void GenerateMenu(){
     struct menuScreen lightsControl = {4, 0, 0, {""}, "X  X  X  X"};
     struct menuScreen scenarios = {5, 2, 1, {">> Scenario 1   ", "> Scenario 2   "}, ""};
     struct menuScreen nameSet = {6, 1, 0, {"write your phrase"}," " };
-    struct menuScreen temThresh = {7, 0, 0, {""}, "<  10  >"};
+    struct menuScreen temThresh = {7, 0, 0, {""}, "<  35  >"};
     struct menuScreen temAlarm = {8, 0, 0, {""}, "<  on  >"};
     struct menuScreen securityActivation = {9, 0, 0, {""}, "<  on  >"};
     struct menuScreen securityAlarm = {10, 0, 0, {""}, "<  on  >"};
@@ -949,12 +952,60 @@ void keyHandler(){
 
 }
 
+extern TIM_HandleTypeDef *buzzerPwmTimer;
+extern uint32_t buzzerPwmChannel;
+extern TIM_HandleTypeDef htim2;
+void buzzerChangeTone(uint16_t freq, uint16_t volume) {
+    if (freq == 0 || freq > 20000) {
+        __HAL_TIM_SET_COMPARE(buzzerPwmTimer, buzzerPwmChannel, 0);
+    } else {
+        const uint32_t internalClockFreq = HAL_RCC_GetSysClockFreq();
+        const uint32_t prescaler = 1 + internalClockFreq / freq / 60000;
+        const uint32_t timerClock = internalClockFreq / prescaler;
+        const uint32_t periodCycles = timerClock / freq;
+        const uint32_t pulseWidth = volume * periodCycles / 1000 / 2;
 
+        buzzerPwmTimer->Instance->PSC = prescaler - 1;
+        buzzerPwmTimer->Instance->ARR = periodCycles - 1;
+        buzzerPwmTimer->Instance->EGR = TIM_EGR_UG;
+
+        __HAL_TIM_SET_COMPARE(buzzerPwmTimer, buzzerPwmChannel, pulseWidth);
+    }
+}
+void alarm(int position ){
+    static int time = 0 ;
+    int frequency;
+    int period = 1001;
+    switch(position){
+        case 0:
+            frequency = 0;
+            break;
+        case 1: frequency =(int)((maxFrequency-minFrequency)*((sin(2*3.14*((float)(time))/(float)(period))+1)/2)+minFrequency);
+            break;
+        case 2://sqr
+            if(time <period/2){
+                frequency = maxFrequency;
+            } else{
+                frequency = minFrequency;
+            }
+            break;
+        case 3://triangie
+            frequency =(int) (minFrequency + (((maxFrequency - minFrequency)*((float )time )/ (float )period)));
+            break;
+    }
+    buzzerChangeTone(frequency,vol);
+
+
+    time ++;
+    if (time >= period)time = 0 ;
+
+}
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
+extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim6;
 extern UART_HandleTypeDef huart2;
@@ -1290,7 +1341,9 @@ void EXTI3_IRQHandler(void)
 void EXTI4_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI4_IRQn 0 */
-
+someOneClose = 1;
+mSecond = 0;
+HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, 1);
   /* USER CODE END EXTI4_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(PIR_Pin);
   /* USER CODE BEGIN EXTI4_IRQn 1 */
@@ -1306,26 +1359,26 @@ void ADC1_2_IRQHandler(void)
   /* USER CODE BEGIN ADC1_2_IRQn 0 */
     static int counter  =  0 ;
     static int temSum = 0;
-    static int lumSum = 0 ;
+//    static int lumSum = 0 ;
     counter ++;
     if(counter %100== 0){
 
-        lumSum +=  (int) ((HAL_ADC_GetValue(&hadc1) * 99) / 1000);
+//        lumSum +=  (int) ((HAL_ADC_GetValue(&hadc1) * 99) / 1000);
         int Voltage_mv = (int)(HAL_ADC_GetValue(&hadc2) * 3300 / 4095);
         temSum += Voltage_mv / 10;
 
         if(counter == 900){
 
-            int lumCopy = lum;
+//            int lumCopy = lum;
             int temCopy = temperature;
-            lum = lumSum/10;
-            temperature = temSum / 10;
+//            lum = lumSum/10;
+            temperature = temSum / 100;
             counter = 0 ;
             temSum = 0 ;
-            lumSum = 0 ;
+//            lumSum = 0 ;
 
-            if(lum < lumCopy)HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,1);
-            if(temperature > temSum)HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,0);
+//            if(lum < lumCopy)HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,1);
+            if(temperature > temSum)HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,0);
         }
 
     }
@@ -1355,6 +1408,21 @@ void EXTI9_5_IRQHandler(void)
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */
 
   /* USER CODE END EXTI9_5_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM2 global interrupt.
+  */
+void TIM2_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM2_IRQn 0 */
+
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
+	HAL_TIM_Base_Start_IT(&htim2);
+
+  /* USER CODE END TIM2_IRQn 1 */
 }
 
 /**
@@ -1398,7 +1466,11 @@ void USART2_IRQHandler(void)
 void TIM6_DAC_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM6_DAC_IRQn 0 */
-
+static int alarmPosition = 0;
+//setCursor(0,0);
+char temp2[2] = " ";
+sprintf(temp2,"%d",temperature);
+//print(temp2);
 		if(startState == 1 && HAL_GetTick() - startStateLastTime >= 1000){
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10,1);
 			clear();
@@ -1414,8 +1486,18 @@ void TIM6_DAC_IRQHandler(void)
 			generateMenu = 0;
 			clear();
 		}
-
+		if(temperature <= temThreshold && !someOneClose)
+			alarmPosition = 0;
 		if(temperature > temThreshold || someOneClose){
+			if(securityAlarm == 1 && someOneClose &&temAlarm==1 && temperature > temThreshold){
+				alarmPosition = 1;
+			}
+			else if(securityAlarm == 1 && someOneClose){
+				alarmPosition = 2;
+			}
+			else if(temAlarm==1 && temperature > temThreshold){
+				alarmPosition = 3;
+			}
 			// this part can be changed by animation
 			char temp[1];
 			sprintf(temp,"%d",mSecond);
@@ -1462,6 +1544,7 @@ void TIM6_DAC_IRQHandler(void)
 			}
 
 		}else if(shown){
+			alarmPosition = 0;
 			shown = 0;
 			clear();
 			if(startState == 2){
@@ -1472,7 +1555,12 @@ void TIM6_DAC_IRQHandler(void)
 			}
 		}
 		mSecond++;
-		if(mSecond>=20) mSecond =0;
+		if(mSecond>=20)
+		{
+			mSecond =0;
+			someOneClose = 0;
+		}
+  alarm(alarmPosition);
   /* USER CODE END TIM6_DAC_IRQn 0 */
   HAL_TIM_IRQHandler(&htim6);
   /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
